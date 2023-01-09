@@ -1,0 +1,59 @@
+version: '3'
+services:
+  ubuntu:
+    image: ubuntu
+    volumes:
+    - /home/cmps:/server
+    command: >
+      bash -c "apt-get update && apt-get install -y python3 python3-pip libsm6 libxext6 ffmpeg libfontconfig1 libxrender1 libgl1-mesa-glx nmap nano && python3 /server/main.py"
+    container_name: NOL_SMTP
+    ports:
+      - "25:8025"
+      - "554:554"
+      - "8554:8554"
+      - "22:22"
+    networks:
+      camera_network:
+        ipv4_address: 172.18.0.2
+    environment:
+      - TELEGRAM_TOKEN=1453504913:AAGbI00yCpa1kcVuljo8IbG3K2vzgB72i5E # Telegram API key anahtarını ekleyin.
+      - TELEGRAM_CHAT_ID=-1001641166931 # Mesajların gönderileceği telegram grup chat_id' nizi ekleyin.
+      - DEEPSTACK_IP=172.18.0.3 # Sistemde kurulu olan deepstack ip adresini ekleyin.
+      - DEEPSTACK_PORT=5000 # Sistemde kurulu olan deepstack ip adresini ekleyin.
+      - STREAM_URL=rtmps://dc4-1.rtmp.t.me/s/ # Canlı yayın bağlantı linkini telegram üzerinden alabilirsiniz.
+      - STREAM_KEY=1641166931:BwPVUg1e0reNlyCljL2gAQ # Canlı yayın bağlantı anahtarını telegram üzerinden alabilirsiniz.
+      - SERVER_PORT=8025 # Docker üzerinde çalışan sunucunuzun SMTP server portu.
+      - RTSP_URL=554/1 # Kamera sisteminize uygun RTSP link bağlantını bulup ekleyin.
+      - SERVER_IP=172.18.0.2 # Docker üzerinde çalışan sunucunuzun SMTP server adresi.
+      - SERVER_USERNAME=netcity@netcity.com.tr # SMTP server'a bağlanabilmek için kameranıza server kullanıcı adını ekleyin.
+      - SERVER_PASSWORD=fa1led! # SMTP server'a bağlanabilmek için kameranıza server parolanızı ekleyin.
+      - CAM_USERNAME=admin # Telegram üzerinden canlı yayın bağlantısını izleyebilmek için kamera kullanıcı adınızı ekleyin.
+      - CAM_PASSWORD=671846 # Telegram üzerinden canlı yayın bağlantısını izleyebilmek için kamera şifrenizi ekleyin.
+      - DEVICE_REGEX=([.A-Z]*(?=</b>)),((?<=b1:.).([A-Z])+) # Sunucunuzdan gelen mail'in body özelliği aktiftir, log kayıtlarından takip ederek cihaz adınızı bulacak uygun regex'i araya "," koyarak ekleyin.
+      - OBJECTS=person,cat,bird # Altta girilen değerler bu liste içerisindeki sıralamaya göre olmalıdır.
+      - CONFIDANCE=0.7,0.6,0.8 # Bir üst açıklamdaki bilgiyi dikkate alınız.
+    extra_hosts:
+      - "smtpserver:172.18.0.2"
+    restart: "on-failure"
+  deepstack:
+    image: "deepquestai/deepstack:latest"
+    networks:
+      camera_network:
+        ipv4_address: 172.18.0.3
+    extra_hosts:
+      - "deepstack:172.18.0.2"
+    container_name: NOL_DEEPSTACK
+    volumes:
+      - /opt/dpstack:/datastore
+    ports:
+      - "80:5000"
+    environment:
+      - VISION-DETECTION=True
+    restart: "on-failure"
+networks:
+  camera_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/27
